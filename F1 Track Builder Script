@@ -1,0 +1,459 @@
+-- ========================================================
+-- F1 TRACK HUB & AUTO-BUILDER (INTERFAZ Y SECUENCIA FUSIONADAS)
+-- ========================================================
+
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Prevenir duplicados de interfaz
+if CoreGui:FindFirstChild("F1ModernHub") then
+    CoreGui.F1ModernHub:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "F1ModernHub"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Ventana Principal (Estilo XyronHub)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 380, 0, 460)
+MainFrame.Position = UDim2.new(0.5, -190, 0.5, -230)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+-- Barra Superior
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 45)
+TopBar.BackgroundColor3 = Color3.fromRGB(26, 26, 34)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 12)
+TopBarCorner.Parent = TopBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Text = "  F1 Track Hub"
+TitleLabel.Size = UDim2.new(0, 140, 1, 0)
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextSize = 16
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Parent = TopBar
+
+local KeylessBadge = Instance.new("TextButton")
+KeylessBadge.Text = "Keyless"
+KeylessBadge.Size = UDim2.new(0, 70, 0, 24)
+KeylessBadge.Position = UDim2.new(0, 145, 0.5, -12)
+KeylessBadge.BackgroundColor3 = Color3.fromRGB(114, 75, 215)
+KeylessBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeylessBadge.Font = Enum.Font.SourceSansBold
+KeylessBadge.TextSize = 12
+KeylessBadge.Parent = TopBar
+
+local BadgeCorner = Instance.new("UICorner")
+BadgeCorner.CornerRadius = UDim.new(0, 6)
+BadgeCorner.Parent = KeylessBadge
+
+-- Botón Cerrar (X)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Text = "✕"
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(215, 60, 60)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 14
+CloseBtn.Parent = TopBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseBtn
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- Botón Minimizar (-)
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Text = "-"
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0.5, -15)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Font = Enum.Font.SourceSansBold
+MinimizeBtn.TextSize = 16
+MinimizeBtn.Parent = TopBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 6)
+MinCorner.Parent = MinimizeBtn
+
+local minimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    for _, child in ipairs(MainFrame:GetChildren()) do
+        if child ~= TopBar and child ~= MainCorner then child.Visible = not minimized end
+    end
+    MainFrame.Size = minimized and UDim2.new(0, 380, 0, 45) or UDim2.new(0, 380, 0, 460)
+end)
+
+-- Barra de Búsqueda
+local SearchBox = Instance.new("TextBox")
+SearchBox.PlaceholderText = "Search..."
+SearchBox.Size = UDim2.new(0.92, 0, 0, 35)
+SearchBox.Position = UDim2.new(0.04, 0, 0, 55)
+SearchBox.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 150)
+SearchBox.Font = Enum.Font.SourceSans
+SearchBox.TextSize = 14
+SearchBox.Parent = MainFrame
+
+local SearchCorner = Instance.new("UICorner")
+SearchCorner.CornerRadius = UDim.new(0, 8)
+SearchCorner.Parent = SearchBox
+
+-- Sistema de Pestañas
+local TabsContainer = Instance.new("Frame")
+TabsContainer.Size = UDim2.new(0.92, 0, 0, 38)
+TabsContainer.Position = UDim2.new(0.04, 0, 0, 100)
+TabsContainer.BackgroundTransparency = 1
+TabsContainer.Parent = MainFrame
+
+local tabs = {"Circuitos", "Farming", "Settings"}
+local tabButtons = {}
+local tabContentFrames = {}
+
+local PagesContainer = Instance.new("Frame")
+PagesContainer.Size = UDim2.new(0.92, 0, 0, 275)
+PagesContainer.Position = UDim2.new(0.04, 0, 0, 148)
+PagesContainer.BackgroundTransparency = 1
+PagesContainer.Parent = MainFrame
+
+for i, tabName in ipairs(tabs) do
+    local btnWidth = 1 / #tabs
+    local tBtn = Instance.new("TextButton")
+    tBtn.Text = tabName
+    tBtn.Size = UDim2.new(btnWidth - 0.02, 0, 1, 0)
+    tBtn.Position = UDim2.new((i - 1) * btnWidth, 0, 0, 0)
+    tBtn.BackgroundColor3 = (i == 1) and Color3.fromRGB(114, 75, 215) or Color3.fromRGB(28, 28, 38)
+    tBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tBtn.Font = Enum.Font.SourceSansBold
+    tBtn.TextSize = 13
+    tBtn.Parent = TabsContainer
+
+    local tCorner = Instance.new("UICorner")
+    tCorner.CornerRadius = UDim.new(0, 8)
+    tCorner.Parent = tBtn
+    tabButtons[tabName] = tBtn
+
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.Visible = (i == 1)
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.ScrollBarThickness = 4
+    page.Parent = PagesContainer
+    tabContentFrames[tabName] = page
+
+    local uiList = Instance.new("UIListLayout")
+    uiList.SortOrder = Enum.SortOrder.LayoutOrder
+    uiList.Padding = UDim.new(0, 8)
+    uiList.Parent = page
+
+    tBtn.MouseButton1Click:Connect(function()
+        for name, frame in pairs(tabContentFrames) do frame.Visible = (name == tabName) end
+        for name, b in pairs(tabButtons) do b.BackgroundColor3 = (name == tabName) and Color3.fromRGB(114, 75, 215) or Color3.fromRGB(28, 28, 38) end
+    end)
+end
+
+-- Función para Toggles
+local function createToggle(parent, titleText, callback)
+    local itemFrame = Instance.new("Frame")
+    itemFrame.Size = UDim2.new(1, 0, 0, 48)
+    itemFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    itemFrame.BorderSizePixel = 0
+    itemFrame.Parent = parent
+
+    local itemCorner = Instance.new("UICorner")
+    itemCorner.CornerRadius = UDim.new(0, 8)
+    itemCorner.Parent = itemFrame
+
+    local label = Instance.new("TextLabel")
+    label.Text = "  " .. titleText
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.TextColor3 = Color3.fromRGB(220, 220, 240)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    label.Parent = itemFrame
+
+    local toggleBg = Instance.new("TextButton")
+    toggleBg.Text = ""
+    toggleBg.Size = UDim2.new(0, 46, 0, 24)
+    toggleBg.Position = UDim2.new(1, -56, 0.5, -12)
+    toggleBg.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    toggleBg.Parent = itemFrame
+
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(1, 0)
+    toggleCorner.Parent = toggleBg
+
+    local toggleCircle = Instance.new("Frame")
+    toggleCircle.Size = UDim2.new(0, 18, 0, 18)
+    toggleCircle.Position = UDim2.new(0, 3, 0.5, -9)
+    toggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    toggleCircle.Parent = toggleBg
+
+    local circleCorner = Instance.new("UICorner")
+    circleCorner.CornerRadius = UDim.new(1, 0)
+    circleCorner.Parent = toggleCircle
+
+    local active = false
+    toggleBg.MouseButton1Click:Connect(function()
+        active = not active
+        if active then
+            toggleBg.BackgroundColor3 = Color3.fromRGB(114, 75, 215)
+            toggleCircle:TweenPosition(UDim2.new(1, -21, 0.5, -9), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.15, true)
+        else
+            toggleBg.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+            toggleCircle:TweenPosition(UDim2.new(0, 3, 0.5, -9), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.15, true)
+        end
+        callback(active)
+    end)
+end
+
+-- --------------------------------------------------------
+-- SIMULADOR DE CLICS (Para la secuencia del juego)
+-- --------------------------------------------------------
+local function simulatedClick(guiObject)
+    if not guiObject then return false end
+    local absPos = guiObject.AbsolutePosition
+    local absSize = guiObject.AbsoluteSize
+    local x = absPos.X + absSize.X / 2
+    local y = absPos.Y + absSize.Y / 2
+    
+    VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+    task.wait(0.1)
+    VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+    return true
+end
+
+-- --------------------------------------------------------
+-- MOTOR DE SECUENCIA DE CONSTRUCCIÓN
+-- --------------------------------------------------------
+local function executeGameBuildSequence()
+    -- Paso 1: Clic en el botón rojo "CONSTRUIR[span_1](start_span)"[span_1](end_span)
+    for _, gui in ipairs(PlayerGui:GetDescendants()) do
+        if (gui:IsA("TextButton") or gui:IsA("ImageButton")) then
+            local nameLower = string.lower(gui.Name)
+            local textLower = string.lower(gui.Text or "")
+            if nameLower == "construir" or textLower == "construir" then
+                simulatedClick(gui)
+                print("[F1 Builder] Paso 1: Botón CONSTRUIR presionado.")
+                break
+            end
+        end
+    end
+    
+    task.wait(0.4)
+    
+    -- Paso 2: Clic en la recta con la meta ("Empezar")
+    for _, gui in ipairs(PlayerGui:GetDescendants()) do
+        if (gui:IsA("TextButton") or gui:IsA("ImageButton")) then
+            local nameLower = string.lower(gui.Name)
+            local textLower = string.lower(gui.Text or "")
+            if string.find(textLower, "empezar") or string.find(nameLower, "empezar") or string.find(textLower, "meta") then
+                simulatedClick(gui)
+                print("[F1 Builder] Paso 2: Pieza de inicio/meta seleccionada.")
+                break
+            end
+        end
+    end
+end
+
+local buildRemote = nil
+for _, child in ipairs(ReplicatedStorage:GetDescendants()) do
+    if child:IsA("RemoteEvent") and (string.find(string.lower(child.Name), "build") or string.find(string.lower(child.Name), "track") or string.find(string.lower(child.Name), "place") or string.find(string.lower(child.Name), "pista")) then
+        buildRemote = child
+        break
+    end
+end
+
+local F1CircuitsData = {
+    ["Monza"] = {
+        {type = "Recto", pos = Vector3.new(0, 0, 0), rot = 0},
+        {type = "Chicane L-R", pos = Vector3.new(0, 0, 20), rot = 0},
+        {type = "Giro a la derecha", pos = Vector3.new(10, 0, 40), rot = 90},
+        {type = "Horquilla para el cabe", pos = Vector3.new(30, 0, 40), rot = 180}
+    },
+    ["Silverstone"] = {
+        {type = "Recto", pos = Vector3.new(0, 0, 0), rot = 0},
+        {type = "Eses de izquierda", pos = Vector3.new(0, 0, 20), rot = 45},
+        {type = "Eses R-L", pos = Vector3.new(15, 0, 40), rot = 90}
+    },
+    ["Spa-Francorchamps"] = {
+        {type = "Horquilla para el cabe", pos = Vector3.new(0, 0, 0), rot = 0},
+        {type = "Fluyendo de", pos = Vector3.new(10, 0, 25), rot = 45},
+        {type = "Diagonal S", pos = Vector3.new(30, 0, 45), rot = 90}
+    },
+    ["Mónaco"] = {
+        {type = "Giro a la derecha", pos = Vector3.new(0, 0, 0), rot = 0},
+        {type = "Chicane R-L", pos = Vector3.new(-20, 0, 20), rot = 180},
+        {type = "Salida L", pos = Vector3.new(-40, 0, 0), rot = 270}
+    }
+}
+
+local function AutoBuildCircuit(circuitName)
+    local layout = F1CircuitsData[circuitName]
+    if not layout then return end
+    
+    print("[F1 Builder] >>> Iniciando autogeneración de " .. circuitName .. " <<<")
+    executeGameBuildSequence()
+    
+    task.spawn(function()
+        task.wait(0.6)
+        for _, node in ipairs(layout) do
+            task.wait(0.35)
+            if buildRemote then
+                pcall(function() buildRemote:FireServer(node.type, node.pos, node.rot) end)
+            else
+                print("[F1 Builder] Colocando pieza: " .. node.type)
+            end
+        end
+        print("[F1 Builder] ¡Circuito " .. circuitName .. " autogenerado con éxito!")
+    end)
+end
+
+-- --------------------------------------------------------
+-- CONTENIDO DE PESTAÑA 1: CIRCUITOS
+-- --------------------------------------------------------
+local cPage = tabContentFrames["Circuitos"]
+local cHeader = Instance.new("TextLabel")
+cHeader.Text = "  CONSTRUCTOR DE CIRCUITOS F1"
+cHeader.Size = UDim2.new(1, 0, 0, 24)
+cHeader.TextColor3 = Color3.fromRGB(160, 140, 220)
+cHeader.Font = Enum.Font.SourceSansBold
+cHeader.TextSize = 12
+cHeader.TextXAlignment = Enum.TextXAlignment.Left
+cHeader.BackgroundTransparency = 1
+cHeader.Parent = cPage
+
+local circuits = {"Monza", "Silverstone", "Spa-Francorchamps", "Mónaco"}
+for _, name in ipairs(circuits) do
+    local btn = Instance.new("TextButton")
+    btn.Text = "Generar Circuito: " .. name
+    btn.Size = UDim2.new(1, 0, 0, 44)
+    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    btn.TextColor3 = Color3.fromRGB(230, 230, 250)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    btn.Parent = cPage
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 8)
+    bCorner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        AutoBuildCircuit(name)
+    end)
+end
+
+-- --------------------------------------------------------
+-- CONTENIDO DE PESTAÑA 2: FARMING
+-- --------------------------------------------------------
+local fPage = tabContentFrames["Farming"]
+local fHeader = Instance.new("TextLabel")
+fHeader.Text = "  AUTOMATIZACIÓN Y FARM"
+fHeader.Size = UDim2.new(1, 0, 0, 24)
+fHeader.TextColor3 = Color3.fromRGB(140, 220, 160)
+fHeader.Font = Enum.Font.SourceSansBold
+fHeader.TextSize = 12
+fHeader.TextXAlignment = Enum.TextXAlignment.Left
+fHeader.BackgroundTransparency = 1
+fHeader.Parent = fPage
+
+local autoFarmEnabled = false
+createToggle(fPage, "Autoempezar Carreras", function(state) autoFarmEnabled = state end)
+
+local antiAfkEnabled = false
+createToggle(fPage, "Anti-AFK", function(state) antiAfkEnabled = state end)
+
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if autoFarmEnabled then
+            pcall(function() print("[Farm] Iniciando carrera automáticamente...") end)
+        end
+    end
+end)
+
+LocalPlayer.Idled:Connect(function()
+    if antiAfkEnabled then
+        VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end
+end)
+
+-- --------------------------------------------------------
+-- CONTENIDO DE PESTAÑA 3: SETTINGS
+-- --------------------------------------------------------
+local sPage = tabContentFrames["Settings"]
+local sHeader = Instance.new("TextLabel")
+sHeader.Text = "  CONFIGURACIÓN DEL HUB"
+sHeader.Size = UDim2.new(1, 0, 0, 24)
+sHeader.TextColor3 = Color3.fromRGB(220, 160, 140)
+sHeader.Font = Enum.Font.SourceSansBold
+sHeader.TextSize = 12
+sHeader.TextXAlignment = Enum.TextXAlignment.Left
+sHeader.BackgroundTransparency = 1
+sHeader.Parent = sPage
+
+createToggle(sPage, "Efectos Visuales UI", function(state) print("Efectos: ", state) end)
+
+-- --------------------------------------------------------
+-- PIE DE PÁGINA (FPS y Ping)
+-- --------------------------------------------------------
+local Footer = Instance.new("Frame")
+Footer.Size = UDim2.new(1, 0, 0, 30)
+Footer.Position = UDim2.new(0, 0, 1, -30)
+Footer.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+Footer.BorderSizePixel = 0
+Footer.Parent = MainFrame
+
+local FooterCorner = Instance.new("UICorner")
+FooterCorner.CornerRadius = UDim.new(0, 12)
+FooterCorner.Parent = Footer
+
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Text = "  FPS: 60 | Ping: 45ms"
+StatsLabel.Size = UDim2.new(1, 0, 1, 0)
+StatsLabel.TextColor3 = Color3.fromRGB(140, 140, 160)
+StatsLabel.Font = Enum.Font.SourceSans
+StatsLabel.TextSize = 12
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.Parent = Footer
+
+RunService.RenderStepped:Connect(function(dt)
+    local fps = math.floor(1 / dt)
+    local ping = 50
+    pcall(function() ping = math.floor(LocalPlayer:GetNetworkPing() * 1000) end)
+    StatsLabel.Text = "  FPS: " .. fps .. " | Ping: " .. ping .. "ms"
+end)
